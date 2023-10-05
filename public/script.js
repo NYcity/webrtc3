@@ -108,6 +108,7 @@ else {
 //         });
 //     });
 
+
 function addVideoStream(video, stream, yourVideo = false) {
     video.srcObject = stream;
     video.addEventListener('loadedmetadata', () => video.play());
