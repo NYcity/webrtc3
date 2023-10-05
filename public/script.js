@@ -24,42 +24,89 @@ const myPeer = new Peer().on('open', (socketID) =>
 
 socket.on('user-disconnected', (socketID) => peers[socketID].close());
 
-navigator.mediaDevices
-    .getUserMedia({ video: true, audio: false })
-    .then((myStream) => {
-        // create your Video
+navigator.getWebcam = (navigator.getUserMedia || navigator.webKitGetUserMedia || navigator.moxGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+if (navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+        .then(function (stream) {
+            //Display the video stream in the video object
+        })
+        .catch(function (e) { logError(e.name + ": " + e.message); });
+}
+else {
+    navigator.getWebcam({ audio: true, video: true },
+        function (myStream) {
+            // create your Video
 
-        addVideoStream(myVideo, myStream, true);
+            addVideoStream(myVideo, myStream, true);
 
-        // Init "WAITING_CALL STATE" of current peer
-        // 4. PersonN waiting for a call from (2)
-        myPeer.on('call', (incomingCall) => {
-            const personNVideo = document.createElement('video');
-            // 5. personN answers the call given personN's Video Stream
-            incomingCall.answer(myStream);
+            // Init "WAITING_CALL STATE" of current peer
+            // 4. PersonN waiting for a call from (2)
+            myPeer.on('call', (incomingCall) => {
+                const personNVideo = document.createElement('video');
+                // 5. personN answers the call given personN's Video Stream
+                incomingCall.answer(myStream);
 
-            // 6. personN now will add myPeer Stream to personN's screen
-            incomingCall.on('stream', (otherVideoStream) => {
-                addVideoStream(personNVideo, otherVideoStream);
-            });
-        });
-
-        // 1. Receive a signal from the server that a new user just joined
-        socket.on('new-user-connected', (personN) => {
-            // 2 .call() share public IP and establish a connection
-            // 3. myPeer call personN given my videoStream
-            const call = myPeer.call(personN, myStream);
-            const personNVideo = document.createElement('video');
-            // 6. AfterpersonN accept the call, myPeer will add personN's stream on myPeer's screen
-            call.on('stream', (otherVideoStream) => {
-                addVideoStream(personNVideo, otherVideoStream);
+                // 6. personN now will add myPeer Stream to personN's screen
+                incomingCall.on('stream', (otherVideoStream) => {
+                    addVideoStream(personNVideo, otherVideoStream);
+                });
             });
 
-            call.on('close', () => personNVideo.remove());
+            // 1. Receive a signal from the server that a new user just joined
+            socket.on('new-user-connected', (personN) => {
+                // 2 .call() share public IP and establish a connection
+                // 3. myPeer call personN given my videoStream
+                const call = myPeer.call(personN, myStream);
+                const personNVideo = document.createElement('video');
+                // 6. AfterpersonN accept the call, myPeer will add personN's stream on myPeer's screen
+                call.on('stream', (otherVideoStream) => {
+                    addVideoStream(personNVideo, otherVideoStream);
+                });
 
-            peers[personN] = call;
-        });
-    });
+                call.on('close', () => personNVideo.remove());
+
+                peers[personN] = call;
+            });
+        },
+        function () { logError("Web cam is not accessible."); });
+}
+
+// navigator.mediaDevices
+//     .getUserMedia({ video: true, audio: false })
+//     .then((myStream) => {
+//         // create your Video
+
+//         addVideoStream(myVideo, myStream, true);
+
+//         // Init "WAITING_CALL STATE" of current peer
+//         // 4. PersonN waiting for a call from (2)
+//         myPeer.on('call', (incomingCall) => {
+//             const personNVideo = document.createElement('video');
+//             // 5. personN answers the call given personN's Video Stream
+//             incomingCall.answer(myStream);
+
+//             // 6. personN now will add myPeer Stream to personN's screen
+//             incomingCall.on('stream', (otherVideoStream) => {
+//                 addVideoStream(personNVideo, otherVideoStream);
+//             });
+//         });
+
+//         // 1. Receive a signal from the server that a new user just joined
+//         socket.on('new-user-connected', (personN) => {
+//             // 2 .call() share public IP and establish a connection
+//             // 3. myPeer call personN given my videoStream
+//             const call = myPeer.call(personN, myStream);
+//             const personNVideo = document.createElement('video');
+//             // 6. AfterpersonN accept the call, myPeer will add personN's stream on myPeer's screen
+//             call.on('stream', (otherVideoStream) => {
+//                 addVideoStream(personNVideo, otherVideoStream);
+//             });
+
+//             call.on('close', () => personNVideo.remove());
+
+//             peers[personN] = call;
+//         });
+//     });
 
 function addVideoStream(video, stream, yourVideo = false) {
     video.srcObject = stream;
